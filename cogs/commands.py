@@ -27,6 +27,7 @@ class Commands(commands.Cog):
         self.client = client  # this allows us to access the client within our cog
 
     @commands.command()
+    @commands.has_permissions(kick_members=True)
     async def warn(self, ctx, *, member: discord.Member):
         # This is to check to see if the user is trying to Warn the bot, and fails if so
         print(dt.date.today())
@@ -111,6 +112,7 @@ class Commands(commands.Cog):
             print(e)
 
     @commands.command(aliases=['pardon'])
+    @commands.has_permissions(kick_members=True)
     async def forgive(self, ctx, *, member: discord.Member):
         try:
             infractions = []
@@ -134,6 +136,7 @@ class Commands(commands.Cog):
             return
 
     @commands.command()
+    @commands.has_permissions(kick_members=True)
     async def unban(self, ctx, *, member):
         banned_users = await ctx.guild.bans()
         member_name, member_discriminator = member.split('#')
@@ -168,13 +171,14 @@ class Commands(commands.Cog):
             await ctx.send(f'{member} is not on the banned list.')
 
     @commands.command()
+    @commands.has_permissions(kick_members=True)
     async def banlist(self, ctx):
         bans = await ctx.guild.bans()
         pretty_list = ["• {0.id} ({0.name}#{0.discriminator})".format(entry.user) for entry in bans]
         await ctx.send("**Ban list:** \n{}".format("\n".join(pretty_list)))
 
     @commands.command(aliases=["user", "info"])
-    # @commands.has_permissions(kick_members=True)
+    @commands.has_permissions(kick_members=True)
     async def whois(self, ctx, *, member: discord.Member):
         infractions = []
         with open('database.csv', encoding='utf-8-sig', newline='') as file:
