@@ -224,6 +224,13 @@ class Commands(commands.Cog):
         embed.set_thumbnail(url=member.avatar_url)
         embed.set_footer(icon_url=ctx.author.avatar_url, text=f"Requested by {ctx.author.name}")
         await ctx.send(embed=embed)
+        
+    @commands.command(aliases = ['purge']) # This is a very useful command, which can be used, when someone starts spamming a lot in the chat/channel.
+    @commands.guild_only()
+    @commands.has_permissions(manage_messages=True)
+    async def clear(self, ctx, amount=100):
+        await ctx.channel.purge(limit=amount)    
+     
 
 
 # This function allows us to connect this cog to our bot
