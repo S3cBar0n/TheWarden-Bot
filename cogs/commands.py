@@ -59,20 +59,16 @@ class Commands(commands.Cog):
                         df.to_csv("database.csv", index=False)
                         warnings = int(df.loc[df["User_ID"] == member.id, "Infractions"])
                         em = discord.Embed(title="Additional Warning", description=f'You have received an additional warning.. {warnings} total')
-                        await ctx.send(embed=em)
                     else:
                         df.loc[df["User_ID"] == member.id, "Infractions"] = 1
                         df.to_csv("database.csv", index=False)
                         em = discord.Embed(title="Infraction recorded", description="Your infraction has been recorded..")
-                        await ctx.send(embed=em)
-
+                    await ctx.send(embed=em)
                     if total_warnings > 0:
                         df.loc[df["User_ID"] == member.id, "Total_Infractions"] += 1
-                        df.to_csv("database.csv", index=False)
                     else:
                         df.loc[df["User_ID"] == member.id, "Infractions"] = 1
-                        df.to_csv("database.csv", index=False)
-
+                    df.to_csv("database.csv", index=False)
                 else:
                     username = member
                     user_id = member.id
@@ -98,7 +94,7 @@ class Commands(commands.Cog):
                 print(warnings)
                 await ctx.guild.ban(member, delete_message_days=1)
                 print(member)
-                em = discord.Embed(title="Member Banned", description=f'{member} has been banned for **3 day(s)**'
+                em = discord.Embed(title="Member Banned", description=f'{member} has been banned for **3 day(s)**')
                 await ctx.send(embed=em)
 
                 try:
@@ -108,17 +104,12 @@ class Commands(commands.Cog):
 
                 except Exception as e:
                     print(e)
-
-            else:
-                return
-                em = discord.Embed(title="Failure", description=f'Failed to ban {member}')
-                await ctx.send(embed=em)
         except Exception as e:
             print(e)
             
     @warn.error
     async def warn_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions): # Runs when the ctx.author doesn't have the permission to execute the command.
+        if isinstance(error, commands.MissingPermissions):  # Runs when the ctx.author doesn't have the permission to execute the command.
             em = discord.Embed(title="Error", description=f"You don't have the `Manage Chanels` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
             await ctx.send(embed=em) # Sends the embed message
 
@@ -137,10 +128,9 @@ class Commands(commands.Cog):
                     df.loc[df["User_ID"] == member.id, "Infractions"] = 0
                     df.to_csv("database.csv", index=False)
                     em = discord.Embed(title="Forgiven", description=f'{member} has been forgiven..')
-                    await ctx.send(embed=em)
                 else:
                     em = discord.Embed(title="No Interactions", description=f"{member} does not have any infractions to forgive.")
-                    await ctx.send(embed=em)
+                await ctx.send(embed=em)
             else:
                 em = discord.Embed(title="No Infractions", description=f"{member} does not have any infractions to forgive.")
                 await ctx.send(embed=em)
@@ -248,8 +238,6 @@ class Commands(commands.Cog):
 
         if total_warnings >= 15:
             troublemaker = True
-        else:
-            return
 
         embed = discord.Embed(title=member.name, description=member.mention, color=color)
         embed.add_field(name='ID', value=str(member.id), inline=False)
@@ -299,11 +287,9 @@ class Commands(commands.Cog):
         if ctx.channel.slowmode_delay != 0:
             await ctx.channel.edit(slowmode_delay=0)
             em = discord.Embed(title="Slowmode removed -", description=f"Removed the slowmode of {ctx.channel.mention}!", colour=discord.Color.random())
-            await ctx.channel.send(embed=em)
-
         else:
             em = discord.Embed(title="No Slowmode detected", description=f"No slowmode detected in the channel {ctx.channel.mention}", colour=discord.Color.random())
-            await ctx.channel.send(embed=em)
+        await ctx.channel.send(embed=em)
 
     @removedelay.error
     async def removedelay_error(self, ctx, error):
