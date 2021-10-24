@@ -27,7 +27,7 @@ class Commands(commands.Cog):
         self.client = client  # this allows us to access the client within our cog
 
     @commands.command()
-    @commands.has_permissions(kick_members=True)
+    @commands.has_permissions(manage_channels=True) # Permissions required for executing the command
     async def warn(self, ctx, *, member: discord.Member):
         # This is to check to see if the user is trying to Warn the bot, and fails if so
         print(dt.date.today())
@@ -58,19 +58,17 @@ class Commands(commands.Cog):
                         df.loc[df["User_ID"] == member.id, "Infractions"] += 1
                         df.to_csv("database.csv", index=False)
                         warnings = int(df.loc[df["User_ID"] == member.id, "Infractions"])
-                        await ctx.send(f'You have received an additional warning.. {warnings} total')
+                        em = discord.Embed(title="Additional Warning", description=f'You have received an additional warning.. {warnings} total')
                     else:
                         df.loc[df["User_ID"] == member.id, "Infractions"] = 1
                         df.to_csv("database.csv", index=False)
-                        await ctx.send("Your infraction has been recorded..")
-
+                        em = discord.Embed(title="Infraction recorded", description="Your infraction has been recorded..")
+                    await ctx.send(embed=em)
                     if total_warnings > 0:
                         df.loc[df["User_ID"] == member.id, "Total_Infractions"] += 1
-                        df.to_csv("database.csv", index=False)
                     else:
                         df.loc[df["User_ID"] == member.id, "Infractions"] = 1
-                        df.to_csv("database.csv", index=False)
-
+                    df.to_csv("database.csv", index=False)
                 else:
                     username = member
                     user_id = member.id
@@ -86,7 +84,8 @@ class Commands(commands.Cog):
                 print(e)
                 return
         else:
-            await ctx.send("Silly, you cannot punish The Warden...")
+            em = discord.Embed(title="Cannot punish Warden", description="Silly, you cannot punish The Warden...")
+            await ctx.send(embed=em)
             return
 
         try:
@@ -95,7 +94,8 @@ class Commands(commands.Cog):
                 print(warnings)
                 await ctx.guild.ban(member, delete_message_days=1)
                 print(member)
-                await ctx.send(f'{member} has been banned for **3 day(s)**')
+                em = discord.Embed(title="Member Banned", description=f'{member} has been banned for **3 day(s)**')
+                await ctx.send(embed=em)
 
                 try:
                     df = pd.read_csv('database.csv')
@@ -104,12 +104,14 @@ class Commands(commands.Cog):
 
                 except Exception as e:
                     print(e)
-
-            else:
-                return
-                await ctx.send(f'Failed to ban {member}')
         except Exception as e:
             print(e)
+            
+    @warn.error
+    async def warn_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):  # Runs when the ctx.author doesn't have the permission to execute the command.
+            em = discord.Embed(title="Error", description=f"You don't have the `Manage Chanels` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em) # Sends the embed message
 
     @commands.command(aliases=['pardon'])
     @commands.has_permissions(kick_members=True)
@@ -125,18 +127,26 @@ class Commands(commands.Cog):
                 if warnings > 0:
                     df.loc[df["User_ID"] == member.id, "Infractions"] = 0
                     df.to_csv("database.csv", index=False)
-                    await ctx.send(f'{member} has been forgiven..')
+                    em = discord.Embed(title="Forgiven", description=f'{member} has been forgiven..')
                 else:
-                    await ctx.send(f"{member} does not have any infractions to forgive.")
+                    em = discord.Embed(title="No Interactions", description=f"{member} does not have any infractions to forgive.")
+                await ctx.send(embed=em)
             else:
-                await ctx.send(f"{member} does not have any infractions to forgive.")
+                em = discord.Embed(title="No Infractions", description=f"{member} does not have any infractions to forgive.")
+                await ctx.send(embed=em)
                 return
         except Exception as e:
             print(e)
             return
+        
+    @forgive.error
+    async def forgive_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            em = discord.Embed(title="Error", description=f"You don't have the `Kick Members` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em)
 
     @commands.command()
-    @commands.has_permissions(kick_members=True)
+    @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, *, member):
         banned_users = await ctx.guild.bans()
         member_name, member_discriminator = member.split('#')
@@ -146,7 +156,8 @@ class Commands(commands.Cog):
 
                 if (user.name, user.discriminator) == (member_name, member_discriminator):
                     await ctx.guild.unban(user)
-                    await ctx.send(f'{member} has been unbanned.')
+                    em = discord.Embed(title="Unbanned Member", description=f'{member} has been unbanned.')
+                    await ctx.send(embed=em)
 
                     print(member)
 
@@ -162,13 +173,21 @@ class Commands(commands.Cog):
                             df.loc[df["Username"] == ban, "Tempban"] = ''
                             df.to_csv("database.csv", index=False)
                 else:
-                    await ctx.send(f"Can't find {member} to unban...")
+                    em = discord.Embed(title="No Member Found", description=f"Can't find {member} to unban...")
+                    await ctx.send(embed=em)
 
 
 
         except Exception as e:
             print(e)
-            await ctx.send(f'{member} is not on the banned list.')
+            em = discord.Embed(title="No Member Found", description=f'{member} is not on the banned list.')
+            await ctx.send(embed=em)
+            
+    @unban.error
+    async def unban_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            em = discord.Embed(title="Error", description=f"You don't have the `Ban Members` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em)
 
     @commands.command()
     @commands.has_permissions(kick_members=True)
@@ -176,6 +195,12 @@ class Commands(commands.Cog):
         bans = await ctx.guild.bans()
         pretty_list = ["• {0.id} ({0.name}#{0.discriminator})".format(entry.user) for entry in bans]
         await ctx.send("**Ban list:** \n{}".format("\n".join(pretty_list)))
+        
+    @banlist.error
+    async def banlist_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            em = discord.Embed(title="Error", description=f"You don't have the `Kick Members` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em)
 
     @commands.command(aliases=["user", "info"])
     @commands.has_permissions(kick_members=True)
@@ -213,8 +238,6 @@ class Commands(commands.Cog):
 
         if total_warnings >= 15:
             troublemaker = True
-        else:
-            return
 
         embed = discord.Embed(title=member.name, description=member.mention, color=color)
         embed.add_field(name='ID', value=str(member.id), inline=False)
@@ -225,13 +248,55 @@ class Commands(commands.Cog):
         embed.set_footer(icon_url=ctx.author.avatar_url, text=f"Requested by {ctx.author.name}")
         await ctx.send(embed=embed)
         
+    @whois.error
+    async def whois_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            em = discord.Embed(title="Error", description=f"You don't have the `Kick Members` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em)
+        
     @commands.command(aliases = ['purge']) # This is a very useful command, which can be used, when someone starts spamming a lot in the chat/channel.
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def clear(self, ctx, amount=100):
         await ctx.channel.purge(limit=amount)    
-     
+        
+    @clear.error
+    async def clear_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            em = discord.Embed(title="Error", description=f"You don't have the `Manage Messages` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em)
+                                   
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def slowmode(self, ctx, seconds: int):
+        await ctx.channel.edit(slowmode_delay=seconds)
+        em = discord.Embed(title="Slowmode Set -", description=f"Set the slowmode to {seconds} seconds in {ctx.channel.mention}", colour= discord.Color.random())
+        await ctx.channel.send(embed=em)
 
+    @slowmode.error
+    async def slowmode_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            em = discord.Embed(title="Error", description=f"You don't have the `Manage Channels` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em)
+
+    @commands.command(aliases=["remove_slowmode", "removeslowmode"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def removedelay(self, ctx):  
+        if ctx.channel.slowmode_delay != 0:
+            await ctx.channel.edit(slowmode_delay=0)
+            em = discord.Embed(title="Slowmode removed -", description=f"Removed the slowmode of {ctx.channel.mention}!", colour=discord.Color.random())
+        else:
+            em = discord.Embed(title="No Slowmode detected", description=f"No slowmode detected in the channel {ctx.channel.mention}", colour=discord.Color.random())
+        await ctx.channel.send(embed=em)
+
+    @removedelay.error
+    async def removedelay_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            em = discord.Embed(title="Error", description=f"You don't have the `Manage Channels` permission to use this command.{ctx.author.mention}", colour=ctx.author.colour)
+            await ctx.send(embed=em)
+     
 
 # This function allows us to connect this cog to our bot
 def setup(client):
