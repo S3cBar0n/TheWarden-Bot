@@ -7,7 +7,7 @@ import os
 from discord.ext import commands, tasks
 
 try:
-    df = pd.read_csv('filtered_words.csv')
+    df = pd.read_csv("filtered_words.csv")
     filtered_words = df["Words"]
     print(filtered_words)
 except Exception as e:
@@ -30,8 +30,30 @@ class Events(commands.Cog):
     # When a known command fails, throws error
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        await ctx.send(ctx.command.name + " didn't work! Give it another try.")
-        print(error)
+        if isinstance(error, commands.MissingPermissions):
+            missing = [
+                perm.replace("_", " ").replace("guild", "server").title()
+                for perm in error.missing_perms
+            ]
+            if len(missing) > 2:
+                fmt = "{}, and {}".format("**, **".join(missing[:-1]), missing[-1])
+            else:
+                fmt = " and ".join(missing)
+
+            missing_permissions = (
+                "You need the **{}** permission(s) to use this command.".format(fmt)
+            )
+
+            embed = discord.Embed(
+                title="Missing Permissions error",
+                description=missing_permissions,
+                colour=ctx.author.colour,
+            )
+            await ctx.send(embed=embed)
+
+        else:
+            await ctx.send(ctx.command.name + " didn't work! Give it another try.")
+            print(error)
 
     # Event for monitoring command usage
     @commands.Cog.listener()
@@ -51,39 +73,58 @@ class Events(commands.Cog):
             await msg.delete()
             author = msg.author
             try:
-                if os.path.isfile('database.csv'):
-                    csv_file = open('database.csv', 'a', encoding='utf-8-sig', newline='')
+                if os.path.isfile("database.csv"):
+                    csv_file = open(
+                        "database.csv", "a", encoding="utf-8-sig", newline=""
+                    )
                     csv_writer = csv.writer(csv_file)
                 # If the file does not exist, creates it
                 else:
-                    csv_file = open('database.csv', 'w', encoding='utf-8-sig', newline='')
+                    csv_file = open(
+                        "database.csv", "w", encoding="utf-8-sig", newline=""
+                    )
                     csv_writer = csv.writer(csv_file)
                     csv_writer.writerow(
-                        ['Username', 'User_ID', 'Infractions', 'Muted', 'Tempban', 'Ban', 'Total_Infractions'])
+                        [
+                            "Username",
+                            "User_ID",
+                            "Infractions",
+                            "Muted",
+                            "Tempban",
+                            "Ban",
+                            "Total_Infractions",
+                        ]
+                    )
             except Exception as e:
                 print(e)
                 exit()
 
             try:
                 infractions = []
-                with open('database.csv', encoding='utf-8-sig', newline='') as file:
+                with open("database.csv", encoding="utf-8-sig", newline="") as file:
                     for row in csv.reader(file):
                         infractions.append(row[1])
                 if str(author.id) in infractions:
-                    df = pd.read_csv('database.csv')
+                    df = pd.read_csv("database.csv")
                     warnings = int(df.loc[df["User_ID"] == author.id, "Infractions"])
-                    total_warnings = int(df.loc[df["User_ID"] == author.id, "Total_Infractions"])
+                    total_warnings = int(
+                        df.loc[df["User_ID"] == author.id, "Total_Infractions"]
+                    )
                     if warnings > 0:
                         df.loc[df["User_ID"] == author.id, "Infractions"] += 1
                         df.to_csv("database.csv", index=False)
-                        warnings = int(df.loc[df["User_ID"] == author.id, "Infractions"])
+                        warnings = int(
+                            df.loc[df["User_ID"] == author.id, "Infractions"]
+                        )
                         await author.send(
-                            f'The word "{word}" is banned on our server... You have received an additional warning.. {warnings} total')
+                            f'The word "{word}" is banned on our server... You have received an additional warning.. {warnings} total'
+                        )
                     else:
                         df.loc[df["User_ID"] == author.id, "Infractions"] = 1
                         df.to_csv("database.csv", index=False)
                         await author.send(
-                            f'The word "{word}" is banned on our server... Your infraction has been recorded..')
+                            f'The word "{word}" is banned on our server... Your infraction has been recorded..'
+                        )
 
                     if total_warnings > 0:
                         df.loc[df["User_ID"] == author.id, "Total_Infractions"] += 1
@@ -95,12 +136,13 @@ class Events(commands.Cog):
                     user_id = str(author.id)
                     csv_writer.writerow([username, user_id])
                     csv_file.close()
-                    df = pd.read_csv('database.csv')
+                    df = pd.read_csv("database.csv")
                     df.loc[df["User_ID"] == author.id, "Infractions"] = 1
                     df.loc[df["User_ID"] == author.id, "Total_Infractions"] = 1
                     df.to_csv("database.csv", index=False)
                     await author.send(
-                        f'The word "{word}" is banned on our server... Your infraction has been recorded..')
+                        f'The word "{word}" is banned on our server... Your infraction has been recorded..'
+                    )
             except Exception as e:
                 print(e)
 
@@ -111,9 +153,9 @@ class Events(commands.Cog):
                 print(warnings)
                 await msg.author.ban()
                 print(author)
-                await author.send(f'You have been banned for **3 day(s)**')
+                await author.send(f"You have been banned for **3 day(s)**")
                 try:
-                    df = pd.read_csv('database.csv')
+                    df = pd.read_csv("database.csv")
                     df.loc[df["User_ID"] == author.id, "Tempban"] = dt.date.today()
                     df.to_csv("database.csv", index=False)
 
@@ -133,7 +175,7 @@ class Events(commands.Cog):
 
             await asyncio.sleep(30)
 
-            df = pd.read_csv('database.csv')
+            df = pd.read_csv("database.csv")
             bandate = df["Tempban"]
 
             for date in bandate:
@@ -144,20 +186,20 @@ class Events(commands.Cog):
                 delta = (d2 - d1).days
                 if delta >= 3:
                     try:
-                        print('------ Performing Unban ------')
+                        print("------ Performing Unban ------")
                         user = int(df.loc[df["Tempban"] == date, "User_ID"])
                         df.loc[df["Tempban"] == date, "Infractions"] = 0
-                        df.loc[df["Tempban"] == date, "Tempban"] = ''
+                        df.loc[df["Tempban"] == date, "Tempban"] = ""
                         df.to_csv("database.csv", index=False)
                         await guild.unban(discord.Object(id=user))
                         # Send message in a specific channel when the user has been unbanned
-                        print(f'----- Unbanned {user} -----')
+                        print(f"----- Unbanned {user} -----")
                     except Exception as e:
                         print(e)
                         continue
             else:
                 print("No Bans could be processed at this time")
-                print('----------------------')
+                print("----------------------")
                 continue
 
 
